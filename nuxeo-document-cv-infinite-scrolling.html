@@ -19,11 +19,10 @@ Contributors:
 <link rel="import" href="../nuxeo-elements/nuxeo-connection.html">
 <link rel="import" href="../nuxeo-elements/nuxeo-page-provider.html">
 <link rel="import" href="../iron-ajax/iron-request.html">
-
+<link rel="import" href="../paper-spinner/paper-spinner.html">
 <link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
 <link rel="import" href="../iron-icon/iron-icon.html">
 <link rel="import" href="../paper-item/paper-item.html">
-
 <link rel="import" href="../iron-list/iron-list.html">
 <link rel="import" href="../iron-scroll-threshold/iron-scroll-threshold.html">
 
@@ -50,7 +49,7 @@ Example:
           display: block;
           font-family: sans-serif;
         }
-        #itemsList,
+        #scrollThreshold,
         #selectedItemsList {
           @apply(--layout-flex);
         }
@@ -137,10 +136,12 @@ Example:
           @apply(--layout-vertical);
         }
 
-
         .loadingIndicator {
           text-align: center;
           height: 40px;
+          background-color: #0b8043;
+          color: white;
+          padding-top: 10px;
         }
         .loadingIndicator paper-spinner {
           width: 20px;
@@ -148,12 +149,11 @@ Example:
           margin-right: 10px;
         }
 
-
     </style>
 
     <nuxeo-connection id="nx" connection-id="[[connectionId]]"></nuxeo-connection>
 
-    <nuxeo-page-provider id="provider" auto
+    <nuxeo-page-provider id="provider"
        provider="[[provider]]"
        page-size="[[pageSize]]"
        number-of-pages="{{pageCount}}"
@@ -170,29 +170,31 @@ Example:
     <div class="twoColumns">
 
       <!-- Main List for the items -->
-      <iron-list id="itemsList" items="[[currentPage]]" selected-items="{{selectedItems}}" selection-enabled multi-selection>
-        <template>
-          <div>
-            <div tabindex$="[[tabIndex]]" aria-label$="Select/Deselect [[item.name]]" class$="[[_computedClass(selected)]]">
-              <img class="nxicon" src="http://localhost:8080/nuxeo/[[item.properties.common:icon]]">
-              <div class="pad">
-                <div class="primary">
-                  [[item.title]]
+       <iron-scroll-threshold id="scrollThreshold"
+        lower-threshold="100"
+        on-lower-threshold="_loadMoreData">
+        <iron-list id="itemsList" items="[]" selected-items="{{selectedItems}}" selection-enabled multi-selection>
+          <template>
+            <div>
+              <div tabindex$="[[tabIndex]]" aria-label$="Select/Deselect [[item.name]]" class$="[[_computedClass(selected)]]">
+                <img class="nxicon" src="http://localhost:8080/nuxeo/[[item.properties.common:icon]]">
+                <div class="pad">
+                  <div class="primary">
+                    [[item.title]]
+                  </div>
+                  <div class="secondary dim">[[item.path]]</div>
                 </div>
-                <div class="secondary dim">[[item.path]]</div>
+                <iron-icon icon$="[[iconForItem(selected)]]" class="star"></iron-icon>
               </div>
-              <iron-icon icon$="[[iconForItem(selected)]]" class="star"></iron-icon>
+              <div class="border"></div>
             </div>
-            <div class="border"></div>
-          </div>
-        </template>
-        <!-- this element will load more data when the user scrolls down and reached the lower threshold -->
-        <iron-scroll-threshold id="scrollTheshold"
-          lower-threshold="500"
-          on-lower-threshold="_loadMoreData">
-        </iron-scroll-threshold>
+          </template>
+          <!-- this element will load more data when the user scrolls down and reached the lower threshold -->
+        </iron-list>
+        <div id="loader" class="loadingIndicator"><paper-spinner active="true"></paper-spinner>Loading more data ...</div>
+      </iron-scroll-threshold>
 
-      </iron-list>
+
       <div id="starredView" hidden$="[[!showSelection]]">
         <template is="dom-if" if="[[!selectedItems.length]]">
           <div class="noSelection">Select a Document</div>
@@ -205,10 +207,6 @@ Example:
         </iron-list>
       </div>
 
-    </div>
-
-    <div class="loadingIndicator">
-      <paper-spinner active="{{loadingPeople}}"></paper-spinner> Fetching data
     </div>
 
   </template>
@@ -227,7 +225,7 @@ Example:
           },
           provider: {
             type: String,
-            value: 'document_search'
+            value: 'default_search'
           },
           aggregations: {
             type: Object,
@@ -236,7 +234,7 @@ Example:
           },
           pageNumber: {
             type: Number,
-            value: 1
+            value: 0
           },
           pageSize: {
             type: Number,
@@ -247,7 +245,8 @@ Example:
             value: 1
           },
           isNextPageAvailable: {
-            type: Boolean
+            type: Boolean,
+            value: true
           },
           isSmartImport: {
             type: Boolean,
@@ -294,16 +293,24 @@ Example:
         },
 
         _showSelectionChanged: function() {
-          console.log('_showSelectionChanged');
           this.$.selectedItemsList.fire('resize');
         },
 
         _loadMoreData: function() {
-          console.log('_loadMoreData');
+          if (this.isNextPageAvailable) {
+            this.pageNumber = this.pageNumber + 1;
+            this.$.provider.fetch();
+          } else {
+            $(this.$.loader).hide();
+          }
         },
 
-        _didRespond: function() {
-          console.log('_didRespond');
+        _didRespond: function(e) {
+          var docs = e.srcElement.currentPage;
+          docs.forEach(function(doc) {
+            this.$.itemsList.push('items', doc);
+          }.bind(this));
+          this.$.scrollThreshold.clearTriggers();
         }
 
       })
