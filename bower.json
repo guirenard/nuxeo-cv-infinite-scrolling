@@ -1,0 +1,33 @@
+{
+  "name": "nuxeo-document-cv-infinite-scrolling",
+  "version": "0.2.4",
+  "authors": [
+    "Guillaume Renard <grenard@nuxeo.com>"
+  ],
+  "description": "A content view with infinite scrolling",
+  "keywords": [
+    "web-component",
+    "polymer",
+    "nuxeo"
+  ],
+  "main": "nuxeo-document-cv-infinite-scrolling.html",
+  "license": "LGPL",
+  "homepage": "https://github.com/nuxeo/nuxeo-document-cv-infinite-scrolling/",
+  "ignore": [
+    "/.*",
+    "/test/"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#^1.1.4",
+    "nuxeo-elements": "nuxeo/nuxeo-elements#^0.2.0",
+    "iron-list": "PolymerElements/iron-list#^1.2.3",
+    "paper-item": "PolymerElements/paper-item#^1.1.3",
+    "iron-scroll-threshold": "PolymerElements/iron-scroll-threshold#^1.0.1"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#1.0.5",
+    "moment": "2.10.6",
+    "test-fixture": "PolymerElements/test-fixture#^1.0.0",
+    "web-component-tester": "*"
+  }
+}

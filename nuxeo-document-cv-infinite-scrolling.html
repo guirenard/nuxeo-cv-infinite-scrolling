@@ -1,0 +1,313 @@
+<!--
+(C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Contributors:
+    Guillaume Renard <grenard@nuxeo.com>
+-->
+<link rel="import" href="../nuxeo-elements/nuxeo-connection.html">
+<link rel="import" href="../nuxeo-elements/nuxeo-page-provider.html">
+<link rel="import" href="../iron-ajax/iron-request.html">
+
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../paper-item/paper-item.html">
+
+<link rel="import" href="../iron-list/iron-list.html">
+<link rel="import" href="../iron-scroll-threshold/iron-scroll-threshold.html">
+
+<!--
+A Nuxeo content view with infinite scrolling.
+
+Example:
+
+    <nuxeo-document-cv-infinite-scrolling>
+    </nuxeo-document-cv-infinite-scrolling>
+
+@group Nuxeo UI
+@element nuxeo-document-cv-infinite-scrolling
+@demo demo/demo-cv-infinite-scrolling.html
+-->
+<dom-module id="nuxeo-document-cv-infinite-scrolling">
+  <template>
+
+    <style is="custom-style">
+      :host {
+          @apply(--layout-fit);
+          @apply(--layout-vertical);
+          @apply(--paper-font-common-base);
+          display: block;
+          font-family: sans-serif;
+        }
+        #itemsList,
+        #selectedItemsList {
+          @apply(--layout-flex);
+        }
+        .item {
+          @apply(--layout-horizontal);
+          cursor: pointer;
+          padding: 16px 22px;
+          border-bottom: 1px solid #DDD;
+        }
+        .item:focus,
+        .item.selected:focus {
+          outline: 0;
+          background-color: #ddd;
+        }
+        .item.selected .star {
+          color: var(--paper-blue-600);
+        }
+        .item.selected {
+          background-color: var(--google-grey-300);
+          border-bottom: 1px solid #ccc;
+        }
+        .nxicon {
+          height: 40px;
+          width: 40px;
+          border-radius: 20px;
+          box-sizing: border-box;
+          background-color: #ddd;
+        }
+        .pad {
+          @apply(--layout-flex);
+          @apply(--layout-vertical);
+          padding: 0 16px;
+        }
+        .primary {
+          font-size: 16px;
+        }
+        .secondary {
+          font-size: 14px;
+        }
+        .dim {
+          color: gray;
+        }
+        .star {
+          width: 24px;
+          height: 24px;
+        }
+        #starredView {
+          width: 40%;
+          border-left: 1px solid #ddd;
+        }
+        paper-item {
+          white-space: nowrap;
+          cursor: pointer;
+          position: relative;
+        }
+        paper-item:hover::after {
+          content: "－";
+          width: 16px;
+          height: 16px;
+          display: block;
+          border-radius: 50% 50%;
+          background-color: var(--google-red-300);
+          margin-left: 10px;
+          line-height: 16px;
+          text-align: center;
+          color: white;
+          font-weight: bold;
+          text-decoration: none;
+          position: absolute;
+          right: 15px;
+          top: calc(50% - 8px);
+        }
+        .noSelection {
+          color: #999;
+          margin-left: 10px;
+          line-height: 50px;
+        }
+        .twoColumns {
+          @apply(--layout-flex);
+          @apply(--layout-horizontal);
+          overflow: hidden;
+        }
+        #starredView {
+          @apply(--layout-vertical);
+        }
+
+
+        .loadingIndicator {
+          text-align: center;
+          height: 40px;
+        }
+        .loadingIndicator paper-spinner {
+          width: 20px;
+          height: 20px;
+          margin-right: 10px;
+        }
+
+
+    </style>
+
+    <nuxeo-connection id="nx" connection-id="[[connectionId]]"></nuxeo-connection>
+
+    <nuxeo-page-provider id="provider" auto
+       provider="[[provider]]"
+       page-size="[[pageSize]]"
+       number-of-pages="{{pageCount}}"
+       aggregations="{{aggregations}}"
+       enrichers="thumbnail"
+       current-page="{{currentPage}}"
+       page="[[pageNumber]]"
+       is-next-page-available="{{isNextPageAvailable}}"
+       current-page-size="{{currentPageSize}}"
+       on-update="_didRespond"
+       >
+    </nuxeo-page-provider>
+
+    <div class="twoColumns">
+
+      <!-- Main List for the items -->
+      <iron-list id="itemsList" items="[[currentPage]]" selected-items="{{selectedItems}}" selection-enabled multi-selection>
+        <template>
+          <div>
+            <div tabindex$="[[tabIndex]]" aria-label$="Select/Deselect [[item.name]]" class$="[[_computedClass(selected)]]">
+              <img class="nxicon" src="http://localhost:8080/nuxeo/[[item.properties.common:icon]]">
+              <div class="pad">
+                <div class="primary">
+                  [[item.title]]
+                </div>
+                <div class="secondary dim">[[item.path]]</div>
+              </div>
+              <iron-icon icon$="[[iconForItem(selected)]]" class="star"></iron-icon>
+            </div>
+            <div class="border"></div>
+          </div>
+        </template>
+        <!-- this element will load more data when the user scrolls down and reached the lower threshold -->
+        <iron-scroll-threshold id="scrollTheshold"
+          lower-threshold="500"
+          on-lower-threshold="_loadMoreData">
+        </iron-scroll-threshold>
+
+      </iron-list>
+      <div id="starredView" hidden$="[[!showSelection]]">
+        <template is="dom-if" if="[[!selectedItems.length]]">
+          <div class="noSelection">Select a Document</div>
+        </template>
+        <!-- List for the selected items -->
+        <iron-list id="selectedItemsList" items="[[selectedItems]]" hidden$="[[!selectedItems.length]]">
+          <template>
+            <paper-item tabindex$="[[tabIndex]]" on-tap="_unselect" aria-label$="Deselect [[item.name]]">[[item.title]]</paper-item>
+          </template>
+        </iron-list>
+      </div>
+
+    </div>
+
+    <div class="loadingIndicator">
+      <paper-spinner active="{{loadingPeople}}"></paper-spinner> Fetching data
+    </div>
+
+  </template>
+
+  <script>
+    (function() {
+
+      Polymer({
+        is: 'nuxeo-document-cv-infinite-scrolling',
+
+        properties: {
+          params: {
+            type: Object,
+            value: {},
+            notify: true
+          },
+          provider: {
+            type: String,
+            value: 'document_search'
+          },
+          aggregations: {
+            type: Object,
+            value: {},
+            notify: true
+          },
+          pageNumber: {
+            type: Number,
+            value: 1
+          },
+          pageSize: {
+            type: Number,
+            value: 20
+          },
+          pageCount: {
+            type: Number,
+            value: 1
+          },
+          isNextPageAvailable: {
+            type: Boolean
+          },
+          isSmartImport: {
+            type: Boolean,
+            value: false
+          },
+          dropZoneTimeout: {
+            type: Object
+          },
+          currentIndex: {
+            type: Number,
+            notify: true
+          },
+          currentDocument: {
+            type: Object
+          },
+          selectedItems: {
+            type: Object
+          },
+          showSelection: {
+            type: Boolean,
+            value: true,
+            observer: '_showSelectionChanged'
+          }
+        },
+
+        iconForItem: function(isSelected) {
+          return isSelected ? 'star' : 'star-border';
+        },
+
+        _computedClass: function(isSelected) {
+          var classes = 'item';
+          if (isSelected) {
+            classes += ' selected';
+          }
+          return classes;
+        },
+
+        _unselect: function(e) {
+          this.$.itemsList.deselectItem(e.model.item);
+        },
+
+        _toggleStarredView: function() {
+          this.showSelection = !this.showSelection;
+        },
+
+        _showSelectionChanged: function() {
+          console.log('_showSelectionChanged');
+          this.$.selectedItemsList.fire('resize');
+        },
+
+        _loadMoreData: function() {
+          console.log('_loadMoreData');
+        },
+
+        _didRespond: function() {
+          console.log('_didRespond');
+        }
+
+      })
+    })();
+  </script>
+
+</dom-module>
