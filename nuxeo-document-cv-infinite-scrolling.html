@@ -170,10 +170,10 @@ Example:
     <div class="twoColumns">
 
       <!-- Main List for the items -->
-       <iron-scroll-threshold id="scrollThreshold"
+      <iron-scroll-threshold id="scrollThreshold"
         lower-threshold="100"
         on-lower-threshold="_loadMoreData">
-        <iron-list id="itemsList" items="[]" selected-items="{{selectedItems}}" selection-enabled multi-selection>
+        <iron-list id="itemsList" items="[[items]]" selected-items="{{selectedItems}}" selection-enabled multi-selection>
           <template>
             <div>
               <div tabindex$="[[tabIndex]]" aria-label$="Select/Deselect [[item.name]]" class$="[[_computedClass(selected)]]">
@@ -269,6 +269,10 @@ Example:
             type: Boolean,
             value: true,
             observer: '_showSelectionChanged'
+          },
+          items: {
+            type: Array,
+            value: []
           }
         },
 
@@ -308,9 +312,10 @@ Example:
         _didRespond: function(e) {
           var docs = e.srcElement.currentPage;
           docs.forEach(function(doc) {
-            this.$.itemsList.push('items', doc);
+            this.push('items', doc);
           }.bind(this));
           this.$.scrollThreshold.clearTriggers();
+          this.$.itemsList.fire('iron-resize');
         }
 
       })
