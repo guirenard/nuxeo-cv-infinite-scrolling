@@ -49,8 +49,7 @@ Example:
           display: block;
           font-family: sans-serif;
         }
-        #scrollThreshold,
-        #selectedItemsList {
+        #scrollThreshold {
           @apply(--layout-flex);
         }
         .item {
@@ -64,7 +63,7 @@ Example:
           outline: 0;
           background-color: #ddd;
         }
-        .item.selected .star {
+        .item.selected {
           color: var(--paper-blue-600);
         }
         .item.selected {
@@ -92,50 +91,6 @@ Example:
         .dim {
           color: gray;
         }
-        .star {
-          width: 24px;
-          height: 24px;
-        }
-        #starredView {
-          width: 40%;
-          border-left: 1px solid #ddd;
-        }
-        paper-item {
-          white-space: nowrap;
-          cursor: pointer;
-          position: relative;
-        }
-        paper-item:hover::after {
-          content: "－";
-          width: 16px;
-          height: 16px;
-          display: block;
-          border-radius: 50% 50%;
-          background-color: var(--google-red-300);
-          margin-left: 10px;
-          line-height: 16px;
-          text-align: center;
-          color: white;
-          font-weight: bold;
-          text-decoration: none;
-          position: absolute;
-          right: 15px;
-          top: calc(50% - 8px);
-        }
-        .noSelection {
-          color: #999;
-          margin-left: 10px;
-          line-height: 50px;
-        }
-        .twoColumns {
-          @apply(--layout-flex);
-          @apply(--layout-horizontal);
-          overflow: hidden;
-        }
-        #starredView {
-          @apply(--layout-vertical);
-        }
-
         .loadingIndicator {
           text-align: center;
           height: 40px;
@@ -162,12 +117,9 @@ Example:
        current-page="{{currentPage}}"
        page="[[pageNumber]]"
        is-next-page-available="{{isNextPageAvailable}}"
-       current-page-size="{{currentPageSize}}"
-       on-update="_didRespond"
-       >
+       current-page-size="{{currentPageSize}}">
     </nuxeo-page-provider>
 
-    <div class="twoColumns">
 
       <!-- Main List for the items -->
       <iron-scroll-threshold id="scrollThreshold"
@@ -184,7 +136,6 @@ Example:
                   </div>
                   <div class="secondary dim">[[item.path]]</div>
                 </div>
-                <iron-icon icon$="[[iconForItem(selected)]]" class="star"></iron-icon>
               </div>
               <div class="border"></div>
             </div>
@@ -194,20 +145,6 @@ Example:
         <div id="loader" class="loadingIndicator"><paper-spinner active="true"></paper-spinner>Loading more data ...</div>
       </iron-scroll-threshold>
 
-
-      <div id="starredView" hidden$="[[!showSelection]]">
-        <template is="dom-if" if="[[!selectedItems.length]]">
-          <div class="noSelection">Select a Document</div>
-        </template>
-        <!-- List for the selected items -->
-        <iron-list id="selectedItemsList" items="[[selectedItems]]" hidden$="[[!selectedItems.length]]">
-          <template>
-            <paper-item tabindex$="[[tabIndex]]" on-tap="_unselect" aria-label$="Deselect [[item.name]]">[[item.title]]</paper-item>
-          </template>
-        </iron-list>
-      </div>
-
-    </div>
 
   </template>
 
@@ -224,8 +161,7 @@ Example:
             notify: true
           },
           provider: {
-            type: String,
-            value: 'default_search'
+            type: String
           },
           aggregations: {
             type: Object,
@@ -265,19 +201,10 @@ Example:
           selectedItems: {
             type: Object
           },
-          showSelection: {
-            type: Boolean,
-            value: true,
-            observer: '_showSelectionChanged'
-          },
           items: {
             type: Array,
             value: []
           }
-        },
-
-        iconForItem: function(isSelected) {
-          return isSelected ? 'star' : 'star-border';
         },
 
         _computedClass: function(isSelected) {
@@ -288,35 +215,22 @@ Example:
           return classes;
         },
 
-        _unselect: function(e) {
-          this.$.itemsList.deselectItem(e.model.item);
-        },
-
-        _toggleStarredView: function() {
-          this.showSelection = !this.showSelection;
-        },
-
-        _showSelectionChanged: function() {
-          this.$.selectedItemsList.fire('resize');
-        },
-
         _loadMoreData: function() {
           if (this.isNextPageAvailable) {
             this.pageNumber = this.pageNumber + 1;
-            this.$.provider.fetch();
+            this.$.provider.fetch().then(function() {
+              var docs = this.$.provider.currentPage;
+              docs.forEach(function(doc) {
+                this.push('items', doc);
+              }.bind(this));
+              this.$.scrollThreshold.clearTriggers();
+              this.$.itemsList.fire('iron-resize');
+            }.bind(this));
           } else {
             $(this.$.loader).hide();
           }
-        },
-
-        _didRespond: function(e) {
-          var docs = e.srcElement.currentPage;
-          docs.forEach(function(doc) {
-            this.push('items', doc);
-          }.bind(this));
-          this.$.scrollThreshold.clearTriggers();
-          this.$.itemsList.fire('iron-resize');
         }
+
 
       })
     })();
