@@ -1,0 +1,142 @@
+<dom-module id="nuxeo-document-listing-thumbnail">
+  <template>
+
+    <style is="custom-style" include="shared-styles">
+      .bubbleBox {
+        background-color: #fff;
+        border: 1px solid #eee;
+        border-radius: 3px;
+        display: block;
+        margin: 0 1em 1em 0;
+        padding: 0 1em 1em;
+      }
+      .bubbleHeader {
+        border-color: #e6e9ef;
+        border-style: none none solid;
+        border-width: 1px;
+        margin: 0 0 1em;
+        overflow: hidden;
+        padding: 0.8em 0;
+        white-space: nowrap;
+      }
+      .bubbleHeader h3 {
+        float: left;
+        color: #213f7d;
+        font-weight: bold;
+        line-height: normal;
+        border: 0;
+        display: inline-block;
+        margin: 0;
+        padding: 0.3em 0;
+      }
+      .bubbleHeader paper-button {
+        float: right;
+        border: 1px solid #aaa;
+        font-weight: bold;
+        padding: 0.35em 0.8em;
+        text-transform: none;
+      }
+
+      .bubbleBox {
+        display: block;
+        margin: 0 .4em .8em;
+        position: relative;
+        background-color: #fff;
+        padding: 0;
+      }
+
+      .thumbnailContainer {
+        background-color: #fafafa;
+        border-radius: 3px 3px 0 0;
+        width: 100%;
+        min-height: 190px;
+      }
+
+      .dataContainer {
+        padding: .3em .8em;
+      }
+
+      .dataContainer p {
+        margin: 0 0 .4em;
+        font-size: .75em;
+      }
+
+      input[type="checkbox"] {
+        position: absolute;
+        top: 10px;
+        left: 8px;
+        width: auto;
+      }
+
+      .title {
+        font-size: 1.05em;
+      }
+
+    </style>
+
+    <nuxeo-connection id="nxcon"> </nuxeo-connection>
+
+    <div class="bubbleBox">
+      <iron-image src="[[_thumbnail(doc)]]" sizing="cover" position="center" class="thumbnailContainer"></iron-image>
+      <div>
+        <input type="checkbox">
+      </div>
+      <div class="dataContainer">
+         <a class="title ellipsis" on-click="handleClick">[[doc.title]]</a>
+         <p class="tag">[[_docType(doc)]]</p>
+      </div>
+    </div>
+
+  </template>
+
+  <script>
+    (function() {
+      'use strict';
+
+      Polymer({
+        is: 'nuxeo-document-listing-thumbnail',
+        properties: {
+          doc: {
+            type: Object,
+            notify: true
+          },
+          offset: {
+            type: Number,
+            value: -1
+          }
+        },
+
+        _icon: function() {
+          var url = this.$.nxcon.url;
+          return url + this.doc.properties['common:icon'];
+        },
+
+        _creator: function() {
+          return this.doc.properties['dc:creator'];
+        },
+
+        _thumbnail: function() {
+          if (this.doc.contextParameters.thumbnail.url) {
+            return this.doc.contextParameters.thumbnail.url;
+          } else {
+            var baseUrl = this.$.nxcon.url;
+            return baseUrl + '/nxthumb/default/' + this.doc.uid + '/blobholder:0/';
+          }
+        },
+
+        _docType: function() {
+          return this.doc.type;
+        },
+
+        _href: function(doc) {
+          return page.base() + '/browse' + doc.path;
+        },
+
+        handleClick: function() {
+          this.fire('navigate');
+        }
+      });
+    })();
+  </script>
+
+</dom-module>
